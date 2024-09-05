@@ -27,6 +27,7 @@ app.get('/lembretes', (req, res) => {
 
 // POST - lembretes
 app.post('/lembretes', (req, res) => {
+    //identificador gerado com contador id++
     id++
     //gerar um identificador e pegar um obj da req {texto: 'fazer café'}
     const lembrete = {id, texto: req.body.texto}
