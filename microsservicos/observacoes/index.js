@@ -33,11 +33,6 @@ app.post('/lembretes/:id/observacoes', (req, res) => {
     res.status(201).send(observacoesDoLembreteId)
 }) 
 
-app.post('/eventos', (req, res) => {
-    console.log(req.body)
-    res.status(200).json({mensagem: 'ok nas observações'})
-})
-
 app.listen(PORT, () => {
     console.log(`Observações. Porta ${PORT}`)
 })
