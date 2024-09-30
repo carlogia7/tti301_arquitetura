@@ -1,11 +1,11 @@
 require('dotenv').config()
 const express = require('express')
+const axios  = require('axios')
 app = express()
 app.use(express.json())
 const { PORT } = process.env
 
 const baseConsulta = {}
-
 const funcoes = {
     LembreteCriado: (lembrete) => {
         baseConsulta[lembrete.id] = lembrete
@@ -14,18 +14,40 @@ const funcoes = {
         const observacoes = baseConsulta[observacao.lembreteId]["observacoes"] || []
         observacoes.push(observacao)
         baseConsulta[observacao.lembreteId]["observacoes"] = observacoes
+    },
+    ObservacaoAtualizada: (observacao) => {
+        const observacoes = baseConsulta[observacao.lembreteId]["observacoes"]
+        const indice = observacoes.findIndex((o) => o.id === observacao.id)
+        observacoes[indice] = observacao
+    
     }
 }
 
+//GET /lembretes
 app.get('/lembretes', (req, res) => {
-    res.status(200).send(baseConsulta)
+    res.json(baseConsulta)
 })
+  
 
+//POST /eventos
 app.post('/eventos', (req, res) => {
-    funcoes[req.body.type](req.body.payload)
-    res.status(200).send(baseConsulta)
+    try {
+      const evento = req.body
+      console.log(evento)
+      funcoes[evento.type](evento.payload)  
+    }
+    catch(err) {}
+    res.json({msg: 'ok'})
 })
 
-app.listen(PORT, () => {
-    console.log(`Consultas. Porta ${PORT}`)
+app.listen(PORT, async () => {
+    console.log(`Consulta. ${PORT}`)
+    const resp = await axios.get('http://localhost:10000/eventos')
+    resp.data.forEach((valor, indice, colecao) => {
+      try {
+        funcoes[valor.type](valor.payload)
+      }
+      catch(err) {}
+    })
+  
 })

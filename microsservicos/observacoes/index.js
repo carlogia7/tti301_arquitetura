@@ -3,11 +3,33 @@ const express = require('express')
 const axios = require('axios')
 const { PORT } = process.env
 const {v4: uuidv4 } = require('uuid')
-app = express()
+const app = express()
 app.use(express.json())
 
 
 const observacoesPorLembreteId = {}
+//1. Definir o tratamento do evento ObservacaoClassificada
+//A função associada recebe uma observação
+//Ela deve encontrar essa observação na base local do mss de observacoes e fazer a atualizacao de status
+//Ela deve emitir evento direcionado ao barramento de eventos, que deve ser do tipo ObservacaoAtualizada e deve ter como payload a observacao recebida, claro, incluindo o status
+const funcoes = {
+  ObservacaoClassificada:(observacao) => {
+    const observacoes = observacoesPorLembrete[observacao.lembreteId]
+    const obsParaAtualizar = observacoes.find(o => o.id === observacao.id)
+    obsParaAtualizar.status = observacao.status
+    axios.post('http://localhost:10000/eventos', {
+      type: "ObservacaoAtualizada",
+      payload: {
+        id: observacao.id,
+        texto: observacao.texto,
+        lembreteId: observacao.lembreteId,
+        status: observacao.status
+      }
+    })  
+  }
+}
+
+
 
 // GET - lembretes/idLembrete/observacoes
 //exemplo: /lembretes/15/observacoes: isso dá acesso à coleção de observações apenas do lembrete de id igual a 15
@@ -21,14 +43,17 @@ app.post('/lembretes/:idLembrete/observacoes', async function(req, res){
     const idObservacacao = uuidv4()
     const { texto } = req.body
     const observacoesDoLembrete = observacoesPorLembrete[req.params.idLembrete] || []
-    observacoesDoLembrete.push({id: idObservacacao, texto})
+    observacoesDoLembrete.push({id: idObservacacao, texto, status: 'aguardando'})
     //indexar a base geral de idLembrete e associar a coleção de observações
     observacoesPorLembrete[req.params.idLembrete] = observacoesDoLembrete
     // HATEOAS
     await axios.post("http://localhost:10000/eventos", {
       type: "ObservacaoCriada",
       payload: {
-        id: idObservacacao, texto, lembreteId: req.params.idLembrete
+        id: idObservacacao,
+        texto,
+        lembreteId: req.params.idLembrete,
+        status: 'aguardando'
       }
     })
     res.status(201).json(observacoesDoLembrete)
@@ -36,9 +61,14 @@ app.post('/lembretes/:idLembrete/observacoes', async function(req, res){
 })
   
   
-  app.post('/eventos', (req, res) => {
-    console.log(req.body)
-    res.status(200).json({mensagem: 'ok'})
+app.post('/eventos', (req, res) => {
+  try {
+    const evento = req.body
+    console.log(evento)
+    funcoes[evento.type](evento.payload)
+  }
+  catch(err) {}
+  res.json({msg: 'ok'})
 })
 
 app.listen(PORT, () => {
