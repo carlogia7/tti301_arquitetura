@@ -17,3 +17,6 @@ COPY . .
 
 #colocamos o aplicativo em execução
 CMD ["node", "index.js"]
+
+# RUN = execução "geral"
+# EntryPoint da aplicação
